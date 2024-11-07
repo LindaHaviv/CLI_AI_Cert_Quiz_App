@@ -1,0 +1,22 @@
+# AWS Certification Quiz AI powered CLI Application
+
+This CLI application generates and delivers multiple-choice quiz questions based on any certification exam guide provided as a PDF. It uses AWS services (DynamoDB and Bedrock) and LangChain's Retrieval Augmented Generation (RAG) capabilities to retrieve and generate questions and explanations.
+
+### Features
+- **Automatic Question Generation**: Uses AWS Bedrock and LangChain's RAG.
+- **Document Parsing and Vector Store**: Parses PDFs, loads them into FAISS vector stores, and retrieves relevant information.
+- **Real-time Explanations**: Provides explanations for answers.
+- **DynamoDB Storage**: Saves quiz results for record-keeping.
+
+### Prerequisites
+- **AWS Account**: Access to DynamoDB and Bedrock.
+- **Python Version**: Use Python 3.8 or 3.9.
+- **AWS CLI**: Configure with permissions for DynamoDB and Bedrock.
+- **Exam Guide PDF**: Place in your working directory for any certification (e.g., AWS, Azure, Google Cloud).
+
+### Setup
+
+1. **Clone the Repository**  
+   ```bash
+   git clone https://github.com/yourusername/cert-quiz-cli-app.git
+   cd cert-quiz-cli-app

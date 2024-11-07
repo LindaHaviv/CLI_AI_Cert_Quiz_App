@@ -1,0 +1,7 @@
+boto3
+datetime
+langchain_community
+langchain
+langchain_aws
+pypdf
+faiss-cpu
