@@ -170,7 +170,7 @@ def ask_questions(questions, answers, bedrock_client):
 
 def run_quiz(bedrock_client):
     print("Loading documents and creating vector store...")
-    documents = load_documents("/path / to / notes.pdf")
+    documents = load_documents("RAG-CERT-NOTES/AWS-Certified-AI-Practitioner_Exam-Guide.pdf")
     vector_store = create_vector_store(documents)
 
     print("Generating quiz questions...")
