@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environment
+quiz_env/
+
+# IDE
+.vscode/
+.idea/
+
+# Project specific
+*.cert
+*.key
+*.pem
+
+# AWS
+.aws/
+credentials
+config

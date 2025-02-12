@@ -5,12 +5,11 @@ Build an AI-powered Command Line Interface (CLI) quiz app that leverages Retriev
 
 ## Overview
 
-- **Tech Stack**: Python, LangChain, AWS Bedrock, FAISS, DynamoDB
+- **Tech Stack**: Python, AWS Bedrock, DynamoDB
 - **Key Components**:
-  - **LangChain**: For managing AI model interactions and retrieval.
-  - **AWS Bedrock**: Provides access to language models to generate quiz questions.
-  - **FAISS**: Handles vector storage for fast and efficient information retrieval.
-  - **DynamoDB**: Used to store quiz scores.
+  - **AWS Bedrock**: Provides access to foundation models and Knowledge Base for RAG implementation
+  - **Bedrock Knowledge Base**: Manages the vector embeddings and retrieval for RAG
+  - **DynamoDB**: Used to store quiz scores and user progress.
 
 ## Prerequisites
 
@@ -84,3 +83,4 @@ This app incurs costs based on usage of AWS Bedrock and DynamoDB. Here’s an ap
 
 - **Missing Modules**: If you see errors for missing modules, ensure all dependencies are installed via `pip install -r requirements.txt`.
 - **AWS Access Issues**: Confirm your AWS credentials are configured correctly.
+

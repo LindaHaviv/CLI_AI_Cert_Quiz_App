@@ -1,13 +1,39 @@
 import boto3
 import re
+from datetime import datetime
+import hashlib
+import json
 
 # ANSI escape codes for coloring text
 GREEN = '\033[92m'
 RED = '\033[91m'
 RESET = '\033[0m'
 
-# Initialize Bedrock Agent Runtime client
+# Initialize AWS clients
 bedrock_agent_runtime_client = boto3.client('bedrock-agent-runtime', region_name='us-east-1')
+dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
+
+# DynamoDB table name
+QUIZ_HISTORY_TABLE = 'QuizHistory'
+
+# Create the DynamoDB table if it doesn't exist
+try:
+    table = dynamodb.create_table(
+        TableName=QUIZ_HISTORY_TABLE,
+        KeySchema=[
+            {'AttributeName': 'question_hash', 'KeyType': 'HASH'},
+        ],
+        AttributeDefinitions=[
+            {'AttributeName': 'question_hash', 'AttributeType': 'S'},
+        ],
+        ProvisionedThroughput={
+            'ReadCapacityUnits': 5,
+            'WriteCapacityUnits': 5
+        }
+    )
+    table.meta.client.get_waiter('table_exists').wait(TableName=QUIZ_HISTORY_TABLE)
+except dynamodb.meta.client.exceptions.ResourceInUseException:
+    table = dynamodb.Table(QUIZ_HISTORY_TABLE)
 
 # Function to query the knowledge base
 def query_knowledge_base(knowledge_base_id, model_arn, question):
@@ -78,35 +104,85 @@ def ask_questions(questions, answers):
     return score
 
 # Main function to run the quiz
+def get_question_hash(question):
+    """Generate a hash for a question to use as a unique identifier."""
+    return hashlib.md5(question.encode()).hexdigest()
+
+def is_question_used(question):
+    """Check if a question has been used before."""
+    question_hash = get_question_hash(question)
+    table = dynamodb.Table(QUIZ_HISTORY_TABLE)
+    response = table.get_item(
+        Key={'question_hash': question_hash}
+    )
+    return 'Item' in response
+
+def store_quiz_result(questions, score):
+    """Store quiz results in DynamoDB."""
+    table = dynamodb.Table(QUIZ_HISTORY_TABLE)
+    timestamp = datetime.now().isoformat()
+    
+    for question in questions:
+        question_hash = get_question_hash(question)
+        table.put_item(
+            Item={
+                'question_hash': question_hash,
+                'question_text': question,
+                'timestamp': timestamp,
+                'quiz_score': score
+            }
+        )
+
 def run_quiz(knowledge_base_id, model_arn):
     print("Generating quiz questions...")
-    question_prompt = (
-        "Using the knowledge base, generate 5 multiple-choice questions about the AWS AI Practitioner certification. "
-        "Each question should: 1. Clearly state the question. 2. Provide four answer options labeled A, B, C, and D. "
-        "3. Indicate the correct answer as 'Correct Answer: A/B/C/D'. Ensure the questions are based on content from the knowledge base."
-    )
+    max_attempts = 3
+    attempts = 0
+    required_questions = 5
+    final_questions = []
+    final_answers = []
 
-    quiz_text = query_knowledge_base(knowledge_base_id, model_arn, question_prompt)
+    while len(final_questions) < required_questions and attempts < max_attempts:
+        question_prompt = (
+            f"Using the knowledge base, generate {required_questions - len(final_questions)} "
+            "multiple-choice questions about the AWS AI Practitioner certification. "
+            "Each question should: 1. Clearly state the question. 2. Provide four answer options labeled A, B, C, and D. "
+            "3. Indicate the correct answer as 'Correct Answer: A/B/C/D'. Ensure the questions are based on content from the knowledge base "
+            "and are different from previous questions."
+        )
 
-    if not quiz_text:
-        print("No quiz generated. Please try again.")
-        return
+        quiz_text = query_knowledge_base(knowledge_base_id, model_arn, question_prompt)
 
-    #print("DEBUG: Raw Response Text:")
-    #print(quiz_text)
+        if not quiz_text:
+            print("Failed to generate questions. Retrying...")
+            attempts += 1
+            continue
 
-    questions, answers = parse_questions_and_answers(quiz_text)
-    if not questions:
-        print("No valid questions found. Please try again.")
+        questions, answers = parse_questions_and_answers(quiz_text)
+        
+        for question, answer in zip(questions, answers):
+            if len(final_questions) >= required_questions:
+                break
+            if not is_question_used(question):
+                final_questions.append(question)
+                final_answers.append(answer)
+
+        attempts += 1
+
+    if not final_questions:
+        print("Could not generate enough unique questions. Please try again later.")
         return
 
     print("\nStarting the quiz. Answer each question one at a time.")
-    score = ask_questions(questions, answers)
+    score = ask_questions(final_questions, final_answers)
 
-    print(f"\nYour final score: {score}/{len(questions)}")
+    # Store the results
+    store_quiz_result(final_questions, score)
+
+    print(f"\nYour final score: {score}/{len(final_questions)}")
+    print("Quiz results have been stored.")
 
 if __name__ == "__main__":
-    knowledge_base_id = ""  # Replace with your knowledge base ID
-    model_arn = ""  # Replace with your model ARN
+    knowledge_base_id = "A1OPRG4XPK"  # Replace with your knowledge base ID
+    model_arn = "arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-v2:1" # Replace with your model ARN
 
     run_quiz(knowledge_base_id, model_arn)
